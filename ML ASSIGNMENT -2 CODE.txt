@@ -1,0 +1,98 @@
+
+
+# Import necessary libraries
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
+import numpy as np
+
+# Defining the paths
+train_path = '/GurNum-20230428T071927Z-001/GurNum/train'
+test_path = '/GurNum-20230428T071927Z-001/GurNum/val'
+
+# Defining image size and batch size
+img_size = (64, 64)
+batch_size = 32
+
+# Defining data generators for training and testing sets
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
+train_generator = train_datagen.flow_from_directory(
+    train_path,
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='categorical'
+)
+
+test_datagen = ImageDataGenerator(rescale=1./255)
+test_generator = test_datagen.flow_from_directory(
+    test_path,
+    target_size=img_size,
+    batch_size=batch_size,
+    class_mode='categorical'
+)
+
+# Defining the model architecture
+model = keras.Sequential([
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(img_size[0], img_size[1], 3)),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(128, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Flatten(),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(10, activation='softmax')
+])
+
+# Compiling model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Training model
+history = model.fit(train_generator, epochs=20, validation_data=test_generator)
+
+# Evaluating model on test set
+test_loss, test_acc = model.evaluate(test_generator, verbose=2)
+print('\nTest accuracy:', test_acc)
+
+# Generating predictions on test set
+test_steps_per_epoch = np.math.ceil(test_generator.samples / test_generator.batch_size)
+predictions = model.predict(test_generator, steps=test_steps_per_epoch)
+y_true = test_generator.classes
+y_pred = np.argmax(predictions, axis=1)
+
+# Generating and display confusion matrix
+cm = confusion_matrix(y_true, y_pred)
+print('Confusion matrix:')
+print(cm)
+
+# Plotting training and validation accuracy
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['train', 'val'], loc='upper left')
+plt.show()
+
+# Plotting training and validation loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['train', 'val'], loc='upper left')
+plt.show()
+
+
+
+
+
+
